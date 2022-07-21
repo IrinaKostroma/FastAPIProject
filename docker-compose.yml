@@ -17,6 +17,8 @@ services:
         condition: service_healthy
       ylab_postgres_db:
         condition: service_healthy
+    volumes:
+      - ./:/app
 
   ylab_redis:
     container_name: ylab_redis

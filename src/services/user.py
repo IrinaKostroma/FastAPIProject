@@ -130,7 +130,7 @@ class UserService(ServiceMixin):
         user = self.session.query(User).filter(User.uuid == user_uuid).first()
         if not user:
             raise HTTPException(status_code=400, detail="User not found.")
-        access_token, refresh_token = self.generate_tokens(UserModel(**user))
+        access_token, refresh_token = self.generate_tokens(UserModel(**user.dict()))
         return access_token, refresh_token
 
 
