@@ -40,7 +40,7 @@ def login(user: UserLogin,
 
 
 @router.get(
-    path="users/me",
+    path="/users/me",
     tags=["users"],
     summary="Посмотреть профиль",
 )
@@ -50,8 +50,8 @@ def get_user_me(token: str = Depends(oauth2_scheme),
     return user.dict()
 
 
-@router.put(
-    path="users/me",
+@router.patch(
+    path="/users/me",
     tags=["users"],
     summary="Обновить данные профиля",
 )

@@ -100,7 +100,7 @@ class UserService(ServiceMixin):
             user = self.session.query(User).filter(User.uuid == user_uuid).first()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-        self.cache.set(key=f"{user.user_uuid}", value=user.json())
+        self.cache.set(key=f"{user.uuid}", value=user.json())
         return user
 
     def update_user(self, user: UserUpdate, token: str) -> tuple:
@@ -111,7 +111,7 @@ class UserService(ServiceMixin):
         self.session.commit()
         self.session.refresh(user_by_token)
         # TODO добавить пользователя в кеш
-        access_token, refresh_token = self.generate_tokens(user=UserModel(*user_by_token))
+        access_token, refresh_token = self.generate_tokens(user=UserModel(**user_by_token.dict()))
         # TODO удалить старые токены и добавить новые
         return user_by_token, access_token, refresh_token
 
