@@ -6,7 +6,8 @@ from fastapi import Depends
 from sqlmodel import Session
 
 from src.api.v1.schemas import PostCreate, PostModel
-from src.db import AbstractCache, get_cache, get_session
+from src.db import AbstractCache, get_cache, get_black_list, get_session
+from src.core.config import *
 from src.models import Post
 from src.services import ServiceMixin
 
@@ -26,7 +27,7 @@ class PostService(ServiceMixin):
 
         post = self.session.query(Post).filter(Post.id == item_id).first()
         if post:
-            self.cache.set(key=f"{post.id}", value=post.json())
+            self.cache.set(key=f"{post.id}", value=post.json(), expire=CACHE_EXPIRE_DAYS)
         return post.dict() if post else None
 
     def create_post(self, post: PostCreate) -> dict:
@@ -42,6 +43,7 @@ class PostService(ServiceMixin):
 @lru_cache()
 def get_post_service(
     cache: AbstractCache = Depends(get_cache),
+    black_list: AbstractCache = Depends(get_black_list),
     session: Session = Depends(get_session),
 ) -> PostService:
-    return PostService(cache=cache, session=session)
+    return PostService(cache=cache, black_list=black_list, session=session)
