@@ -3,6 +3,7 @@ from fastapi.security import OAuth2PasswordBearer
 
 from src.api.v1.schemas import UserCreate, UserLogin, UserUpdate, UserModel
 from src.services import UserService, get_user_service
+from src.models import User
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/login")
@@ -15,12 +16,12 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/login")
 )
 def register(user: UserCreate,
              user_service: UserService = Depends(get_user_service)):
-    if user_service.get_user_by_username(user):
+    if user_service.identification(user):
         raise HTTPException(status_code=400, detail="User with this username already exists.")
-    user: dict = user_service.create_user(user)
+    new_user: dict = user_service.create_user(user)
     return {
         "msg": "User created.",
-        "user": user
+        "user": new_user
     }
 
 
@@ -31,8 +32,9 @@ def register(user: UserCreate,
 )
 def login(user: UserLogin,
           user_service: UserService = Depends(get_user_service)):
-    user: UserModel = user_service.authenticate_user(user)
-    access_token, refresh_token = user_service.generate_tokens(user)
+    user: UserModel = user_service.authentication(user)
+    access_token = user_service.create_access_token(user)
+    refresh_token = user_service.create_refresh_token(user)
     return {
         "access_token": access_token,
         "refresh_token": refresh_token
@@ -46,7 +48,7 @@ def login(user: UserLogin,
 )
 def get_user_me(token: str = Depends(oauth2_scheme),
                 user_service: UserService = Depends(get_user_service)):
-    user = user_service.get_user_by_token(token)
+    user: User = user_service.get_me(token)
     return user.dict()
 
 
@@ -58,10 +60,12 @@ def get_user_me(token: str = Depends(oauth2_scheme),
 def update_user(user: UserUpdate,
                 token: str = Depends(oauth2_scheme),
                 user_service: UserService = Depends(get_user_service)):
-    updated_user, access_token = user_service.update_user(user, token)
+    updated_user: User = user_service.update_user(user, token)
+    user_service.delete_tokens(updated_user.uuid)
+    access_token = user_service.create_access_token(UserModel(**updated_user.dict()))
     return {
         "msg": "Update is successful. Please use new access_token.",
-        "user": updated_user,
+        "user": updated_user.dict(),
         "access_token": access_token
     }
 
@@ -78,3 +82,25 @@ def refresh(token: str = Depends(oauth2_scheme),
         "access_token": access_token,
         "refresh_token": refresh_token
     }
+
+
+@router.post(
+    path='/logout',
+    summary="Разлогиниться",
+    tags=['users'],
+)
+def logout(token: str = Depends(oauth2_scheme),
+           user_service: UserService = Depends(get_user_service)):
+    if user_service.logout(token):
+        return {"msg": "You logged out."}
+
+
+@router.post(
+    path='/logout_all',
+    summary="Разлогиниться",
+    tags=['users'],
+)
+def logout_all(token: str = Depends(oauth2_scheme),
+               user_service: UserService = Depends(get_user_service)):
+    if user_service.logout_all(token):
+        return {"msg": "You logged out from all devices."}

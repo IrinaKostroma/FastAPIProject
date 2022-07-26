@@ -1,6 +1,5 @@
 from typing import NoReturn, Optional, Union
 
-from src.core import config
 from src.db import AbstractCache
 
 __all__ = ("CacheRedis",)
@@ -14,9 +13,12 @@ class CacheRedis(AbstractCache):
         self,
         key: str,
         value: Union[bytes, str],
-        expire: int = config.CACHE_EXPIRE_IN_SECONDS,
+        expire: int,
     ):
         self.cache.set(name=key, value=value, ex=expire)
+
+    def delete(self, key: str,):
+        self.cache.delete(key)
 
     def close(self) -> NoReturn:
         self.cache.close()

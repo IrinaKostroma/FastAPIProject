@@ -4,9 +4,8 @@ from typing import Optional, Union
 __all__ = (
     "AbstractCache",
     "get_cache",
+    "get_black_list",
 )
-
-from src.core import config
 
 
 class AbstractCache(ABC):
@@ -22,7 +21,14 @@ class AbstractCache(ABC):
         self,
         key: str,
         value: Union[bytes, str],
-        expire: int = config.CACHE_EXPIRE_IN_SECONDS,
+        expire: int,
+    ):
+        pass
+
+    @abstractmethod
+    def delete(
+        self,
+        key: str,
     ):
         pass
 
@@ -32,8 +38,13 @@ class AbstractCache(ABC):
 
 
 cache: Optional[AbstractCache] = None
+black_list: Optional[AbstractCache] = None
 
 
 # Функция понадобится при внедрении зависимостей
 def get_cache() -> AbstractCache:
     return cache
+
+
+def get_black_list() -> AbstractCache:
+    return black_list
