@@ -1,8 +1,10 @@
+import jwt
 import json
+
+from http import HTTPStatus
 from functools import lru_cache
 from typing import Optional
-
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from sqlmodel import Session
 
 from src.api.v1.schemas import PostCreate, PostModel
@@ -37,6 +39,27 @@ class PostService(ServiceMixin):
         self.session.commit()
         self.session.refresh(new_post)
         return new_post.dict()
+
+    def _is_valid(self, token: str) -> bool:
+        """"Проверить валидность access токена"""
+        try:
+            payload = jwt.decode(token, JWT_SECRET_KEY, JWT_ALGORITHM)
+            type_token = payload.get("type")
+            user_uuid = payload.get("user_uuid")
+            jti = payload.get("jti")
+        except Exception:
+            raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED,
+                                detail="Invalid token.")
+        if user_uuid is None or type_token is None:
+            raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED,
+                                detail="Invalid token.")
+        # access и refresh токенам было установлено время жизни
+        # Redis автоматически удаляет "протухшие" ключи
+        if jti_cached_token := self.cache.get(user_uuid + type_token):
+            if jti_cached_token.decode() == jti:
+                return True
+        raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED,
+                            detail="Invalid token.")
 
 
 # get_post_service — это провайдер PostService. Синглтон

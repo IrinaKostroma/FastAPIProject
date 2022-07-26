@@ -2,11 +2,13 @@ from http import HTTPStatus
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer
 
 from src.api.v1.schemas import PostCreate, PostListResponse, PostModel
 from src.services import PostService, get_post_service
 
 p_router = APIRouter()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/login")
 
 
 @p_router.get(
@@ -49,6 +51,8 @@ def post_detail(
 )
 def post_create(
     post: PostCreate, post_service: PostService = Depends(get_post_service),
+    token: str = Depends(oauth2_scheme),
 ) -> PostModel:
-    post: dict = post_service.create_post(post=post)
+    if post_service._is_valid(token):
+        post: dict = post_service.create_post(post=post)
     return PostModel(**post)
